@@ -1,2 +1,1 @@
-# iot-app-backend
-Multidisciplinary Project - 2023
+# Multidisciplinary Project - 2023
