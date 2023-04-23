@@ -17,3 +17,10 @@
 # Environment variables
 .env*
 !.env.template
+
+# Database files
+*.db
+*.sqlite3
+
+# Pocketbase files
+pb_data/**/*
