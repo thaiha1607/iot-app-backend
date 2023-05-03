@@ -14,8 +14,11 @@ func RegisterTotalUsageTimeRoute(app *pocketbase.PocketBase) {
 		e.Router.GET("/total-usage-time/:deviceId", func(c echo.Context) error {
 			id := c.PathParam("deviceId")
 			period := c.QueryParam("period")
-			return c.JSON(200, map[string]interface{}{
-				"total_usage_time": daos.GetTotalUsageTime(app, id, period),
+			totalUsageTime := daos.GetTotalUsageTime(app, id, period)
+			return c.JSON(200, map[string]any{
+				"total_usage_time": totalUsageTime,
+				// Calc power consumption in kWh with totalUsageTime in minutes and power_capacity in W
+				"power_consumption": float64(totalUsageTime) * float64(daos.GetPowerCapacity(app, id)) / 1000 / 60,
 			})
 		}, apis.ActivityLogger(app))
 		return nil

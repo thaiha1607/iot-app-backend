@@ -33,8 +33,10 @@ func GetTotalUsageTime(app *pocketbase.PocketBase, deviceId string, period strin
 		return 0
 	}
 	for _, record := range records {
-		if record.GetTime("on_time").After(lowerBound) && record.GetTime("on_time").Before(upperBound) {
-			timeUsage = append(timeUsage, int(record.GetTime("off_time").Sub(record.GetTime("on_time")).Minutes()))
+		onTime := record.GetDateTime("on_time").Time()
+		offTime := record.GetDateTime("off_time").Time()
+		if onTime.After(lowerBound) && onTime.Before(upperBound) {
+			timeUsage = append(timeUsage, int(offTime.Sub(onTime).Minutes()))
 		}
 	}
 	var totalUsageTime int
