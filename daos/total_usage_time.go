@@ -15,6 +15,8 @@ func GetTotalUsageTime(app *pocketbase.PocketBase, deviceId string, period strin
 	}
 	var timeUsage []int
 	var upperBound, lowerBound time.Time
+	// For testing purpose
+	// today, _ := time.Parse("2006-Jan-02", "2023-Mar-01")
 	today := time.Now()
 	switch period {
 	case "1d":
@@ -36,12 +38,15 @@ func GetTotalUsageTime(app *pocketbase.PocketBase, deviceId string, period strin
 		onTime := record.GetDateTime("on_time").Time()
 		offTime := record.GetDateTime("off_time").Time()
 		if onTime.After(lowerBound) && onTime.Before(upperBound) {
-			timeUsage = append(timeUsage, int(offTime.Sub(onTime).Minutes()))
+			if offTime.IsZero() {
+				continue
+			}
+			timeUsage = append(timeUsage, int(offTime.Sub(onTime).Seconds()))
 		}
 	}
 	var totalUsageTime int
 	for _, time := range timeUsage {
 		totalUsageTime += time
 	}
-	return totalUsageTime
+	return int(totalUsageTime / 60)
 }

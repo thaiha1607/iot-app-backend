@@ -1,46 +1,60 @@
 package daos
 
 import (
-	"log"
+	"time"
 
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/forms"
+	"github.com/pocketbase/pocketbase/models"
+	"github.com/thaiha1607/iot-app-backend/config"
 )
 
-func RetrieveLatestSensorData(d *daos.Dao, sensorType string) any {
-	var sensorData any
-	rawQuery := d.DB().NewQuery("SELECT * FROM {:table} ORDER BY created_at DESC LIMIT 1")
-	var completeQuery *dbx.Query
-	switch sensorType {
-	case "temperature":
-		completeQuery = rawQuery.Bind(dbx.Params{"table": "temp_sensor"})
-	case "humidity":
-		completeQuery = rawQuery.Bind(dbx.Params{"table": "humid_sensor"})
-	case "infrared":
-		completeQuery = rawQuery.Bind(dbx.Params{"table": "ir_sensor"})
-	default:
-		log.Panicln("Unknown sensor type: ", sensorType)
+func InsertTemperatureAndHumidityData(app *pocketbase.PocketBase, humidVal int, tempVal int, createdAt time.Time) error {
+	records, err := app.Dao().FindRecordsByExpr("sensor", dbx.HashExp{"time": createdAt.Format(config.DefaultDateLayout)})
+	if err != nil {
+		return err
 	}
-	if err := completeQuery.One(&sensorData); err != nil {
-		log.Panicln(err)
+	if len(records) > 0 {
+		return nil
 	}
-	return sensorData
+	collection, err := app.Dao().FindCollectionByNameOrId("sensor")
+	if err != nil {
+		return err
+	}
+	record := models.NewRecord(collection)
+	form := forms.NewRecordUpsert(app, record)
+	form.LoadData(map[string]any{
+		"humi_value": humidVal,
+		"temp_value": tempVal,
+		"time":       createdAt,
+	})
+	if err := form.Submit(); err != nil {
+		return err
+	}
+	return nil
 }
 
-func InsertDataToSensorTable(d *daos.Dao, sensorType string, sensorValue int) {
-	rawQuery := d.DB().NewQuery("INSERT INTO {:table} (value) VALUES ({:value})")
-	var completeQuery *dbx.Query
-	switch sensorType {
-	case "temperature":
-		completeQuery = rawQuery.Bind(dbx.Params{"table": "temp_sensor", "value": sensorValue})
-	case "humidity":
-		completeQuery = rawQuery.Bind(dbx.Params{"table": "humid_sensor", "value": sensorValue})
-	case "infrared":
-		completeQuery = rawQuery.Bind(dbx.Params{"table": "ir_sensor", "value": sensorValue})
-	default:
-		log.Panicln("Unknown sensor type: ", sensorType)
+func InsertInfraredData(app *pocketbase.PocketBase, infraredVal bool, createdAt time.Time) error {
+	records, err := app.Dao().FindRecordsByExpr("infrared_sensor", dbx.HashExp{"time": createdAt.Format(config.DefaultDateLayout)})
+	if err != nil {
+		return err
 	}
-	if _, err := completeQuery.Execute(); err != nil {
-		log.Panicln(err)
+	if len(records) > 0 {
+		return nil
 	}
+	collection, err := app.Dao().FindCollectionByNameOrId("infrared_sensor")
+	if err != nil {
+		return err
+	}
+	record := models.NewRecord(collection)
+	form := forms.NewRecordUpsert(app, record)
+	form.LoadData(map[string]any{
+		"infrared": infraredVal,
+		"time":     createdAt,
+	})
+	if err := form.Submit(); err != nil {
+		return err
+	}
+	return nil
 }

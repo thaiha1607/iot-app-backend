@@ -16,7 +16,7 @@ type FeedDataType []struct {
 	CreatedAt string `json:"created_at"`
 }
 
-func FetchDataFromFeed(feedName string) FeedDataType {
+func FetchDataFromFeed(feedName string, feedDataObj *FeedDataType) {
 	if matched, _ := regexp.MatchString("^[a-z0-9-]+$", feedName); !matched {
 		log.Panicln("Invalid feed name!")
 	}
@@ -31,9 +31,7 @@ func FetchDataFromFeed(feedName string) FeedDataType {
 		log.Panicln(err)
 	}
 	log.Println(string(body))
-	sensorData := FeedDataType{}
-	if jsonErr := json.Unmarshal(body, &sensorData); jsonErr != nil {
+	if jsonErr := json.Unmarshal(body, &feedDataObj); jsonErr != nil {
 		log.Panicln(jsonErr)
 	}
-	return sensorData
 }

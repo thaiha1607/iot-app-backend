@@ -1,29 +1,67 @@
 package daos
 
 import (
-	"log"
+	"time"
 
 	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/forms"
+	"github.com/pocketbase/pocketbase/models"
+	"github.com/thaiha1607/iot-app-backend/config"
 )
 
-func InsertDeviceHistory(d *daos.Dao, deviceType string, deviceValue bool) {
-	rawQuery := d.DB().NewQuery("INSERT INTO {:table} (is_turned_on) VALUES ({:value})")
-	if deviceValue {
-		rawQuery.Bind(dbx.Params{"value": 1})
+func InsertDeviceHistory(app *pocketbase.PocketBase, deviceType string, deviceValue bool, createdAt time.Time) error {
+	var deviceId int
+	if deviceType == "fan" {
+		deviceId = 1
 	} else {
-		rawQuery.Bind(dbx.Params{"value": 0})
+		deviceId = 2
 	}
-	var completeQuery *dbx.Query
-	switch deviceType {
-	case "fan":
-		completeQuery = rawQuery.Bind(dbx.Params{"type": "fan"})
-	case "nebulizer":
-		completeQuery = rawQuery.Bind(dbx.Params{"type": "nebulizer"})
-	default:
-		log.Panicln("Unknown sensor type: ", deviceType)
+	records, err := app.Dao().FindRecordsByExpr("on_off_time", dbx.HashExp{"output_id": deviceId, "on_time": createdAt.Format(config.DefaultDateLayout)})
+	if err != nil {
+		return err
 	}
-	if _, err := completeQuery.Execute(); err != nil {
-		log.Panicln(err)
+	if len(records) > 0 {
+		return nil
 	}
+	if !deviceValue {
+		updateExistingRecord(app, deviceType, createdAt)
+	}
+	collection, err := app.Dao().FindCollectionByNameOrId("on_off_time")
+	if err != nil {
+		return err
+	}
+	record := models.NewRecord(collection)
+	form := forms.NewRecordUpsert(app, record)
+	form.LoadData(map[string]any{
+		"output_id": deviceId,
+		"on_time":   createdAt,
+	})
+	if err := form.Submit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func updateExistingRecord(app *pocketbase.PocketBase, deviceType string, created_at time.Time) error {
+	var deviceId int
+	if deviceType == "fan" {
+		deviceId = 1
+	} else {
+		deviceId = 2
+	}
+	records, err := app.Dao().FindRecordsByExpr("on_off_time", dbx.HashExp{"output_id": deviceId, "off_time": nil})
+	if err != nil {
+		return err
+	}
+	for _, record := range records {
+		form := forms.NewRecordUpsert(app, record)
+		form.LoadData(map[string]any{
+			"off_time": created_at,
+		})
+		if err := form.Submit(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

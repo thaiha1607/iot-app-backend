@@ -1,24 +1,30 @@
 package daos
 
 import (
-	"log"
+	"time"
 
-	"github.com/pocketbase/dbx"
-	"github.com/pocketbase/pocketbase/daos"
+	"github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/forms"
 )
 
-func UpdateThresholdData(d *daos.Dao, deviceType string, val int) {
-	rawQuery := d.DB().NewQuery("UPDATE output_devices SET env_limit = {:value} WHERE type = {:type}")
-	var completeQuery *dbx.Query
-	switch deviceType {
-	case "fan":
-		completeQuery = rawQuery.Bind(dbx.Params{"type": "fan", "value": val})
-	case "nebulizer":
-		completeQuery = rawQuery.Bind(dbx.Params{"type": "nebulizer", "value": val})
-	default:
-		log.Panicln("Unknown sensor type: ", deviceType)
+func UpdateThresholdData(app *pocketbase.PocketBase, deviceType string, val int, createdAt time.Time) error {
+	var prefixStr string
+	if deviceType == "fan" {
+		prefixStr = "temp_"
+	} else {
+		prefixStr = "humi_"
 	}
-	if _, err := completeQuery.Execute(); err != nil {
-		log.Panicln(err)
+	record, err := app.Dao().FindFirstRecordByData(deviceType, prefixStr+"id", 1)
+	if err != nil {
+		return err
 	}
+	form := forms.NewRecordUpsert(app, record)
+	form.LoadData(map[string]any{
+		prefixStr + "threshold":  val,
+		"threshold_setting_time": createdAt,
+	})
+	if err := form.Submit(); err != nil {
+		return err
+	}
+	return nil
 }
