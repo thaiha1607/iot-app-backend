@@ -11,21 +11,21 @@ import (
 )
 
 func InsertDeviceHistory(app *pocketbase.PocketBase, deviceType string, deviceValue bool, createdAt time.Time) error {
+	if !deviceValue {
+		updateExistingRecord(app, deviceType, createdAt)
+	}
 	var deviceId int
 	if deviceType == "fan" {
 		deviceId = 1
 	} else {
 		deviceId = 2
 	}
-	records, err := app.Dao().FindRecordsByExpr("on_off_time", dbx.HashExp{"output_id": deviceId, "on_time": createdAt.Format(config.DefaultDateLayout)})
+	records, err := app.Dao().FindRecordsByExpr("on_off_time", dbx.HashExp{"output_id": deviceId, "time": createdAt.Format(config.DefaultDateLayout)})
 	if err != nil {
 		return err
 	}
 	if len(records) > 0 {
 		return nil
-	}
-	if !deviceValue {
-		updateExistingRecord(app, deviceType, createdAt)
 	}
 	collection, err := app.Dao().FindCollectionByNameOrId("on_off_time")
 	if err != nil {
@@ -36,6 +36,7 @@ func InsertDeviceHistory(app *pocketbase.PocketBase, deviceType string, deviceVa
 	form.LoadData(map[string]any{
 		"output_id": deviceId,
 		"on_time":   createdAt,
+		"time":      createdAt,
 	})
 	if err := form.Submit(); err != nil {
 		return err
@@ -43,21 +44,21 @@ func InsertDeviceHistory(app *pocketbase.PocketBase, deviceType string, deviceVa
 	return nil
 }
 
-func updateExistingRecord(app *pocketbase.PocketBase, deviceType string, created_at time.Time) error {
+func updateExistingRecord(app *pocketbase.PocketBase, deviceType string, createdAt time.Time) error {
 	var deviceId int
 	if deviceType == "fan" {
 		deviceId = 1
 	} else {
 		deviceId = 2
 	}
-	records, err := app.Dao().FindRecordsByExpr("on_off_time", dbx.HashExp{"output_id": deviceId, "off_time": nil})
+	records, err := app.Dao().FindRecordsByExpr("on_off_time", dbx.HashExp{"output_id": deviceId, "off_time": ""})
 	if err != nil {
 		return err
 	}
 	for _, record := range records {
 		form := forms.NewRecordUpsert(app, record)
 		form.LoadData(map[string]any{
-			"off_time": created_at,
+			"off_time": createdAt,
 		})
 		if err := form.Submit(); err != nil {
 			return err
