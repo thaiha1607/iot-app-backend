@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 const (
 	// AdafruitIOUsername is the username of the Adafruit IO account
 	AdafruitIOUsername = "luutodinh"
@@ -25,5 +27,5 @@ const (
 )
 
 func GetAdafruitIOFeedURL(feedName string) string {
-	return AdafruitBaseURL + AdafruitIOUsername + "/feeds/" + feedName + "/data?limit=1&include=value,id,created_at"
+	return fmt.Sprintf("%s%s/feeds/%s/data?limit=1&include=value,id,created_at", AdafruitBaseURL, AdafruitIOUsername, feedName)
 }
