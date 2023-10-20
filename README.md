@@ -1,1 +1,1 @@
-# Multidisciplinary Project - 2023
+# [DEPRECATED] Multidisciplinary Project - 2023
